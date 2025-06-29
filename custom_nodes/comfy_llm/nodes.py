@@ -275,9 +275,30 @@ class TensorViewer:
     RETURN_NAMES = ("text_dump",)
     CATEGORY = "Debug"
 
+    def _parse_part(self, part: str):
+        part = part.strip()
+        if part == "":
+            return slice(None)
+        if ":" in part:
+            segments = part.split(":")
+            if len(segments) > 3:
+                raise ValueError("too many slice segments")
+            vals = []
+            for seg in segments:
+                seg = seg.strip()
+                if seg == "":
+                    vals.append(None)
+                else:
+                    vals.append(int(seg))
+            while len(vals) < 3:
+                vals.append(None)
+            return slice(*vals)
+        return int(part)
+
     def execute(self, tensor: torch.Tensor, slice_spec: str) -> Tuple[str]:
         try:
-            sliced = eval(f"tensor[{slice_spec}]")
+            parts = [self._parse_part(p) for p in slice_spec.split(',') if p != '']
+            sliced = tensor[tuple(parts)] if parts else tensor
         except Exception:
             sliced = tensor
         text = repr(sliced)

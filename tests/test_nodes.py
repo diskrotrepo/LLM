@@ -73,9 +73,21 @@ def test_tensor_viewer_slice():
 
 
 def test_tensor_viewer_bad_slice():
+    import os
     t = torch.arange(6).reshape(2, 3)
     viewer = nodes.TensorViewer()
-    dump, = viewer.execute(t, "bad")
+    executed = False
+
+    def fake_system(cmd):
+        nonlocal executed
+        executed = True
+        return 0
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(os, "system", fake_system)
+    dump, = viewer.execute(t, "__import__('os').system('echo hi')")
+    monkeypatch.undo()
+    assert not executed
     assert "tensor" in dump.lower()
 
 
