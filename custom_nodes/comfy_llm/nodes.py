@@ -29,12 +29,15 @@ def _tokens_to_markdown(tokens: List[int], tokenizer) -> str:
 class ChatInput:
     """Receives a user message and optional conversation id."""
 
-    INPUT_TYPES = {
-        "required": {
-            "message": ("STRING", {"forceInput": True}),
-            "conversation_id": ("STRING", {"default": ""}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "message": ("STRING", {}),
+                "conversation_id": ("STRING", {"default": ""}),
+            }
         }
-    }
+    FUNCTION = "execute"
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("user_msg", "conv_id")
     CATEGORY = "LLM/IO"
@@ -47,12 +50,15 @@ class ChatInput:
 class ChatHistory:
     """Returns recent conversation as markdown."""
 
-    INPUT_TYPES = {
-        "required": {
-            "conv_id": ("STRING", {"forceInput": True}),
-            "n_turns": ("INT", {"default": 5}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "conv_id": ("STRING", {}),
+                "n_turns": ("INT", {"default": 5}),
+            }
         }
-    }
+    FUNCTION = "execute"
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("history_md",)
     OUTPUT_NODE = True
@@ -68,13 +74,16 @@ class ChatHistory:
 class PromptBuilder:
     """Concatenate system prompt, history, and user message."""
 
-    INPUT_TYPES = {
-        "required": {
-            "system_msg": ("STRING", {}),
-            "history_md": ("STRING", {}),
-            "user_msg": ("STRING", {}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "system_msg": ("STRING", {}),
+                "history_md": ("STRING", {}),
+                "user_msg": ("STRING", {}),
+            }
         }
-    }
+    FUNCTION = "execute"
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("prompt",)
     CATEGORY = "LLM/Pre-proc"
@@ -87,14 +96,17 @@ class PromptBuilder:
 class HFInference:
     """Run a HF causal LM and return probabilities for next token."""
 
-    INPUT_TYPES = {
-        "required": {
-            "prompt": ("STRING", {"forceInput": True}),
-            "model_name": ("STRING", {"default": os.environ.get("HF_MODEL", "sshleifer/tiny-gpt2")}),
-            "max_new_tokens": ("INT", {"default": 1}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {}),
+                "model_name": ("STRING", {"default": os.environ.get("HF_MODEL", "sshleifer/tiny-gpt2")}),
+                "max_new_tokens": ("INT", {"default": 1}),
+            }
         }
-    }
-    RETURN_TYPES = ("TENSOR",)
+    FUNCTION = "execute"
+    RETURN_TYPES = ("FLOAT",)
     RETURN_NAMES = ("prob_batch",)
     CATEGORY = "LLM/Model"
 
@@ -112,12 +124,15 @@ class HFInference:
 class AverageProbs:
     """Mean of tensors in list."""
 
-    INPUT_TYPES = {
-        "required": {
-            "probs": ("TENSOR", {"forceInput": True, "is_list": True}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "probs": ("FLOAT", {}),
+            }
         }
-    }
-    RETURN_TYPES = ("TENSOR",)
+    FUNCTION = "execute"
+    RETURN_TYPES = ("FLOAT",)
     RETURN_NAMES = ("avg_probs",)
     CATEGORY = "LLM/Math"
     INPUT_IS_LIST = True
@@ -133,14 +148,17 @@ class AverageProbs:
 class RatioProbs:
     """Element-wise division of tensors with renorm."""
 
-    INPUT_TYPES = {
-        "required": {
-            "positive_probs": ("TENSOR", {"forceInput": True}),
-            "negative_probs": ("TENSOR", {"forceInput": True}),
-            "epsilon": ("FLOAT", {"default": 1e-7}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "positive_probs": ("FLOAT", {}),
+                "negative_probs": ("FLOAT", {}),
+                "epsilon": ("FLOAT", {"default": 1e-7}),
+            }
         }
-    }
-    RETURN_TYPES = ("TENSOR",)
+    FUNCTION = "execute"
+    RETURN_TYPES = ("FLOAT",)
     RETURN_NAMES = ("ratio_probs",)
     CATEGORY = "LLM/Math"
 
@@ -154,13 +172,16 @@ class RatioProbs:
 class TemperatureScaler:
     """Adjust logits or probs by temperature."""
 
-    INPUT_TYPES = {
-        "required": {
-            "logits_or_probs": ("TENSOR", {"forceInput": True}),
-            "temperature": ("FLOAT", {"default": 1.0}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "logits_or_probs": ("FLOAT", {}),
+                "temperature": ("FLOAT", {"default": 1.0}),
+            }
         }
-    }
-    RETURN_TYPES = ("TENSOR",)
+    FUNCTION = "execute"
+    RETURN_TYPES = ("FLOAT",)
     RETURN_NAMES = ("scaled",)
     CATEGORY = "LLM/Math"
 
@@ -173,14 +194,17 @@ class TemperatureScaler:
 class TokenSampler:
     """Sample token id from probability batch."""
 
-    INPUT_TYPES = {
-        "required": {
-            "prob_batch": ("TENSOR", {"forceInput": True}),
-            "top_k": ("INT", {"default": 50}),
-            "top_p": ("FLOAT", {"default": 0.95}),
-            "seed": ("INT", {"default": None}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prob_batch": ("FLOAT", {}),
+                "top_k": ("INT", {"default": 50}),
+                "top_p": ("FLOAT", {"default": 0.95}),
+                "seed": ("INT", {"default": None}),
+            }
         }
-    }
+    FUNCTION = "execute"
     RETURN_TYPES = ("INT", "FLOAT")
     RETURN_NAMES = ("token_id", "token_prob")
     CATEGORY = "LLM/Sampler"
@@ -207,13 +231,16 @@ class TokenSampler:
 class ChatUpdate:
     """Append sampled token to conversation."""
 
-    INPUT_TYPES = {
-        "required": {
-            "conv_id": ("STRING", {"forceInput": True}),
-            "token_id": ("INT", {}),
-            "token_prob": ("FLOAT", {}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "conv_id": ("STRING", {}),
+                "token_id": ("INT", {}),
+                "token_prob": ("FLOAT", {}),
+            }
         }
-    }
+    FUNCTION = "execute"
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("conv_id",)
     CATEGORY = "LLM/IO"
@@ -226,12 +253,15 @@ class ChatUpdate:
 class TensorViewer:
     """Return string slice of tensor for debug."""
 
-    INPUT_TYPES = {
-        "required": {
-            "tensor": ("TENSOR", {"forceInput": True}),
-            "slice_spec": ("STRING", {"default": ":"}),
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "tensor": ("FLOAT", {}),
+                "slice_spec": ("STRING", {"default": ":"}),
+            }
         }
-    }
+    FUNCTION = "execute"
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text_dump",)
     CATEGORY = "Debug"
