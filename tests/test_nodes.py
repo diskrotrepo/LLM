@@ -91,3 +91,10 @@ def test_sampler_fallback_when_top_p_small():
     sampler = nodes.TokenSampler()
     token_id, token_prob = sampler.execute(probs, top_k=2, top_p=0.01, seed=42)
     assert token_id in [0, 1]
+
+def test_node_mappings_cover_all_classes():
+    from custom_nodes.comfy_llm import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+    class_names = [cls.__name__ for cls in nodes.get_classes()]
+    for name in class_names:
+        assert name in NODE_CLASS_MAPPINGS
+        assert name in NODE_DISPLAY_NAME_MAPPINGS
