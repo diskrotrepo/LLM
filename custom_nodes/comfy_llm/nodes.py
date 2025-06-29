@@ -56,6 +56,10 @@ class ChatHistory:
             "required": {
                 "conv_id": ("STRING", {}),
                 "n_turns": ("INT", {"default": 5}),
+                "model_name": (
+                    "STRING",
+                    {"default": os.environ.get("HF_MODEL", "sshleifer/tiny-gpt2")},
+                ),
             }
         }
     FUNCTION = "execute"
@@ -64,9 +68,9 @@ class ChatHistory:
     OUTPUT_NODE = True
     CATEGORY = "LLM/Display"
 
-    def execute(self, conv_id: str, n_turns: int) -> Tuple[str]:
+    def execute(self, conv_id: str, n_turns: int, model_name: str) -> Tuple[str]:
         tokens = _get_conv(conv_id)[-n_turns:]
-        tokenizer = AutoTokenizer.from_pretrained("sshleifer/tiny-gpt2")
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
         md = _tokens_to_markdown(tokens, tokenizer)
         return (md,)
 

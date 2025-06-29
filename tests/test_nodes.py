@@ -59,7 +59,7 @@ def test_chat_update_and_history_roundtrip():
     conv_id = 'convtest'
     update = nodes.ChatUpdate()
     update.execute(conv_id, 0, 0.5)
-    history_md, = nodes.ChatHistory().execute(conv_id, 1)
+    history_md, = nodes.ChatHistory().execute(conv_id, 1, "sshleifer/tiny-gpt2")
     assert isinstance(history_md, str)
 
 
@@ -79,7 +79,7 @@ def test_tensor_viewer_bad_slice():
 
 def test_chat_history_empty():
     conv = "empty_conv"
-    history_md, = nodes.ChatHistory().execute(conv, 1)
+    history_md, = nodes.ChatHistory().execute(conv, 1, "sshleifer/tiny-gpt2")
     assert history_md == ""
 
 
