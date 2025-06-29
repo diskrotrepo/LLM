@@ -7,16 +7,28 @@ import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Simple in-memory conversation store
-_CONVERSATIONS = {}
 
+class HFModelLoader:
+    """Load a HuggingFace causal language model and tokenizer."""
 
-def _get_conv(conv_id: str) -> List[int]:
-    return _CONVERSATIONS.setdefault(conv_id, [])
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model_name": ("STRING", {"default": os.environ.get("HF_MODEL", "sshleifer/tiny-gpt2")}),
+            }
+        }
 
+    FUNCTION = "execute"
+    RETURN_TYPES = ("MODEL", "TOKENIZER")
+    RETURN_NAMES = ("model", "tokenizer")
+    CATEGORY = "LLM/Model"
 
-def _append_token(conv_id: str, token_id: int):
-    _get_conv(conv_id).append(token_id)
+    def execute(self, model_name: str):
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForCausalLM.from_pretrained(model_name)
+        model.eval()
+        return model, tokenizer
 
 
 def _tokens_to_markdown(tokens: List[int], tokenizer) -> str:
@@ -27,24 +39,23 @@ def _tokens_to_markdown(tokens: List[int], tokenizer) -> str:
 
 
 class ChatInput:
-    """Receives a user message and optional conversation id."""
+    """Receives a user message and existing conversation tokens."""
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "message": ("STRING", {}),
-                "conversation_id": ("STRING", {"default": ""}),
+                "conversation": ("LIST", {"default": []}),
             }
         }
     FUNCTION = "execute"
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("user_msg", "conv_id")
+    RETURN_TYPES = ("STRING", "LIST")
+    RETURN_NAMES = ("user_msg", "conversation")
     CATEGORY = "LLM/IO"
 
-    def execute(self, message: str, conversation_id: str) -> Tuple[str, str]:
-        conv_id = conversation_id or os.urandom(4).hex()
-        return message, conv_id
+    def execute(self, message: str, conversation: List[int]) -> Tuple[str, List[int]]:
+        return message, list(conversation)
 
 
 class ChatHistory:
@@ -54,12 +65,9 @@ class ChatHistory:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "conv_id": ("STRING", {}),
+                "tokens": ("LIST", {"default": []}),
                 "n_turns": ("INT", {"default": 5}),
-                "model_name": (
-                    "STRING",
-                    {"default": os.environ.get("HF_MODEL", "sshleifer/tiny-gpt2")},
-                ),
+                "tokenizer": ("TOKENIZER", {}),
             }
         }
     FUNCTION = "execute"
@@ -68,10 +76,8 @@ class ChatHistory:
     OUTPUT_NODE = True
     CATEGORY = "LLM/Display"
 
-    def execute(self, conv_id: str, n_turns: int, model_name: str) -> Tuple[str]:
-        tokens = _get_conv(conv_id)[-n_turns:]
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        md = _tokens_to_markdown(tokens, tokenizer)
+    def execute(self, tokens: List[int], n_turns: int, tokenizer) -> Tuple[str]:
+        md = _tokens_to_markdown(tokens[-n_turns:], tokenizer)
         return (md,)
 
 
@@ -105,7 +111,8 @@ class HFInference:
         return {
             "required": {
                 "prompt": ("STRING", {}),
-                "model_name": ("STRING", {"default": os.environ.get("HF_MODEL", "sshleifer/tiny-gpt2")}),
+                "model": ("MODEL", {}),
+                "tokenizer": ("TOKENIZER", {}),
                 "max_new_tokens": ("INT", {"default": 1}),
             }
         }
@@ -114,9 +121,7 @@ class HFInference:
     RETURN_NAMES = ("prob_batch",)
     CATEGORY = "LLM/Model"
 
-    def execute(self, prompt: str, model_name: str, max_new_tokens: int):
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForCausalLM.from_pretrained(model_name)
+    def execute(self, prompt: str, model, tokenizer, max_new_tokens: int):
         input_ids = tokenizer.encode(prompt, return_tensors="pt")
         with torch.no_grad():
             out = model(input_ids)
@@ -239,19 +244,19 @@ class ChatUpdate:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "conv_id": ("STRING", {}),
+                "conversation": ("LIST", {"default": []}),
                 "token_id": ("INT", {}),
                 "token_prob": ("FLOAT", {}),
             }
         }
     FUNCTION = "execute"
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("conv_id",)
+    RETURN_TYPES = ("LIST",)
+    RETURN_NAMES = ("conversation",)
     CATEGORY = "LLM/IO"
 
-    def execute(self, conv_id: str, token_id: int, token_prob: float):
-        _append_token(conv_id, token_id)
-        return (conv_id,)
+    def execute(self, conversation: List[int], token_id: int, token_prob: float):
+        conversation.append(token_id)
+        return (conversation,)
 
 
 class TensorViewer:
@@ -284,6 +289,7 @@ def get_classes():
         ChatInput,
         ChatHistory,
         PromptBuilder,
+        HFModelLoader,
         HFInference,
         AverageProbs,
         RatioProbs,
