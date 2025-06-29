@@ -7,10 +7,10 @@ transformers = pytest.importorskip('transformers')
 from custom_nodes.comfy_llm import nodes
 
 
-def test_chat_input_generates_id():
-    msg, conv = nodes.ChatInput().execute("hi", "")
+def test_chat_input_generates_list():
+    msg, conv = nodes.ChatInput().execute("hi", [])
     assert msg == "hi"
-    assert isinstance(conv, str) and conv
+    assert isinstance(conv, list)
 
 
 def test_prompt_builder_concat():
@@ -20,8 +20,9 @@ def test_prompt_builder_concat():
 
 
 def test_hf_inference_returns_probs():
+    model, tokenizer = nodes.HFModelLoader().execute("sshleifer/tiny-gpt2")
     node = nodes.HFInference()
-    probs, = node.execute("hello", "sshleifer/tiny-gpt2", 1)
+    probs, = node.execute("hello", model, tokenizer, 1)
     assert probs.shape[0] == 1
     assert pytest.approx(probs.sum().item(), rel=1e-3) == 1.0
 
@@ -56,10 +57,11 @@ def test_token_sampler_deterministic():
 
 
 def test_chat_update_and_history_roundtrip():
-    conv_id = 'convtest'
+    conversation = []
     update = nodes.ChatUpdate()
-    update.execute(conv_id, 0, 0.5)
-    history_md, = nodes.ChatHistory().execute(conv_id, 1, "sshleifer/tiny-gpt2")
+    conversation, = update.execute(conversation, 0, 0.5)
+    _, tokenizer = nodes.HFModelLoader().execute("sshleifer/tiny-gpt2")
+    history_md, = nodes.ChatHistory().execute(conversation, 1, tokenizer)
     assert isinstance(history_md, str)
 
 
@@ -78,8 +80,9 @@ def test_tensor_viewer_bad_slice():
 
 
 def test_chat_history_empty():
-    conv = "empty_conv"
-    history_md, = nodes.ChatHistory().execute(conv, 1, "sshleifer/tiny-gpt2")
+    conv = []
+    _, tokenizer = nodes.HFModelLoader().execute("sshleifer/tiny-gpt2")
+    history_md, = nodes.ChatHistory().execute(conv, 1, tokenizer)
     assert history_md == ""
 
 
