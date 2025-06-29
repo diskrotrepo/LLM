@@ -17,7 +17,7 @@ that the graph can run without large downloads.
 1. Install the required Python packages:
 
    ```bash
-   pip install torch transformers
+   pip install -r requirements.txt
    ```
 
 2. Start ComfyUI with this repository on the Python path so it can discover the
