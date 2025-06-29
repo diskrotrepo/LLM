@@ -25,8 +25,15 @@ class HFModelLoader:
     CATEGORY = "LLM/Model"
 
     def execute(self, model_name: str):
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForCausalLM.from_pretrained(model_name)
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForCausalLM.from_pretrained(model_name)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model '{model_name}': {e}") from e
+
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+
         model.eval()
         return model, tokenizer
 
@@ -77,8 +84,13 @@ class ChatHistory:
     CATEGORY = "LLM/Display"
 
     def execute(self, tokens: List[int], n_turns: int, tokenizer) -> Tuple[str]:
-        md = _tokens_to_markdown(tokens[-n_turns:], tokenizer)
-        return (md,)
+        text = _tokens_to_markdown(tokens, tokenizer)
+        if not text:
+            return ("",)
+
+        lines = [l for l in text.splitlines() if l.strip()]
+        recent = "\n".join(lines[-n_turns:])
+        return (recent,)
 
 
 class PromptBuilder:
