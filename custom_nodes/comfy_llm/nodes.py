@@ -267,8 +267,9 @@ class ChatUpdate:
     CATEGORY = "LLM/IO"
 
     def execute(self, conversation: List[int], token_id: int, token_prob: float):
-        conversation.append(token_id)
-        return (conversation,)
+        new_conv = list(conversation)
+        new_conv.append(token_id)
+        return (new_conv,)
 
 
 class TensorViewer:

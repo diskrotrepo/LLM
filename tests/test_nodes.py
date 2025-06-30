@@ -65,6 +65,15 @@ def test_chat_update_and_history_roundtrip():
     assert isinstance(history_md, str)
 
 
+def test_chat_update_returns_new_list():
+    conversation = [1, 2]
+    update = nodes.ChatUpdate()
+    new_conv, = update.execute(conversation, 3, 0.7)
+    assert conversation == [1, 2]
+    assert new_conv == [1, 2, 3]
+    assert new_conv is not conversation
+
+
 def test_tensor_viewer_slice():
     t = torch.arange(6).reshape(2, 3)
     viewer = nodes.TensorViewer()
