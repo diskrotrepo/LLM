@@ -119,3 +119,9 @@ def test_node_mappings_cover_all_classes():
     for name in class_names:
         assert name in NODE_CLASS_MAPPINGS
         assert name in NODE_DISPLAY_NAME_MAPPINGS
+
+
+def test_hf_loader_bad_model_raises():
+    loader = nodes.HFModelLoader()
+    with pytest.raises(RuntimeError):
+        loader.execute("nonexistent-model-xyz")
